@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microscope Image Processing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #ffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #222e55;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button, select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        input[type="file"] {
+            padding: 8px 0;
+        }
+        button {
+            background-color: #0aec15;
+            color: white;
+            cursor: pointer;
+            border: none;
+            padding: 10px 15px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .image-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .image-container img {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+            background-color: white;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f4fc;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        .error {
+            background-color: #ffe6e6;
+            border-left: 4px solid #ff4d4d;
+        }
+        .accordion {
+            background-color: #eee;
+            color: #444;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            text-align: left;
+            border: none;
+            outline: none;
+            transition: 0.4s;
+            font-weight: bold;
+        }
+        .active, .accordion:hover {
+            background-color: #ddd;
+        }
+        .panel {
+            padding: 0 18px;
+            background-color: white;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+        }
+        .canvas-container {
+            position: relative;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            overflow: hidden;
+        }
+        canvas {
+            cursor: crosshair;
+        }
+        #sessionInfo {
+            padding: 10px;
+            background-color: #e8f4fc;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Microscope Image Processing</h1>
+        
+        <button class="accordion">1. Upload Images</button>
+        <div class="panel">
+            <div class="section">
+                <div class="form-group">
+                    <label for="imageFiles">Select Multiple Images:</label>
+                    <input type="file" id="imageFiles" multiple accept="image/*">
+                </div>
+                <button id="uploadBtn">Upload Images</button>
+                <div id="sessionInfo"></div>
+                <div id="uploadResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <button class="accordion">2. Stitch Images</button>
+        <div class="panel">
+            <div class="section">
+                <div class="form-group">
+                    <label for="stitchSessionId">Session ID:</label>
+                    <input type="text" id="stitchSessionId" placeholder="Enter session ID">
+                </div>
+                <button id="stitchBtn">Stitch Images</button>
+                <div id="stitchResult" class="result" style="display: none;"></div>
+                <div class="image-container">
+                    <img id="stitchedImage" style="display: none;">
+                </div>
+            </div>
+        </div>
+        
+        <button class="accordion">3. Select ROI</button>
+        <div class="panel">
+            <div class="section">
+                <div class="form-group">
+                    <label for="roiImagePath">Image Path:</label>
+                    <input type="text" id="roiImagePath" placeholder="Enter image path">
+                </div>
+                <div class="form-group">
+                    <label>Draw ROI:</label>
+                    <div class="canvas-container">
+                        <canvas id="roiCanvas" width="800" height="600"></canvas>
+                    </div>
+                    <div>
+                        <p>Selected ROI: X: <span id="roiX">0</span>, Y: <span id="roiY">0</span>, Width: <span id="roiWidth">0</span>, Height: <span id="roiHeight">0</span></p>
+                    </div>
+                </div>
+                <button id="loadImageBtn">Load Image</button>
+                <button id="extractRoiBtn">Extract ROI</button>
+                <div id="roiResult" class="result" style="display: none;"></div>
+                <div class="image-container">
+                    <img id="roiImage" style="display: none;">
+                </div>
+            </div>
+        </div>
+        
+        <button class="accordion">4. Zoom Image</button>
+        <div class="panel">
+            <div class="section">
+                <div class="form-group">
+                    <label for="zoomImagePath">Image Path:</label>
+                    <input type="text" id="zoomImagePath" placeholder="Enter image path">
+                </div>
+                <div class="form-group">
+                    <label for="zoomFactor">Zoom Factor:</label>
+                    <select id="zoomFactor">
+                        <option value="10">10x</option>
+                        <option value="20">20x</option>
+                    </select>
+                </div>
+                <button id="zoomBtn">Apply Zoom</button>
+                <div id="zoomResult" class="result" style="display: none;"></div>
+                <div class="image-container">
+                    <img id="zoomedImage" style="display: none;">
+                </div>
+            </div>
+        </div>
+        
+        <button class="accordion">5. Auto-Focus</button>
+        <div class="panel">
+            <div class="section">
+                <div class="form-group">
+                    <label for="focusImagePath">Image Path:</label>
+                    <input type="text" id="focusImagePath" placeholder="Enter image path">
+                </div>
+                <button id="focusBtn">Apply Auto-Focus</button>
+                <div id="focusResult" class="result" style="display: none;"></div>
+                <div class="image-container">
+                    <img id="focusedImage" style="display: none;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize accordion
+        document.addEventListener('DOMContentLoaded', function() {
+            const acc = document.getElementsByClassName("accordion");
+            for (let i = 0; i < acc.length; i++) {
+                acc[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    const panel = this.nextElementSibling;
+                    if (panel.style.maxHeight) {
+                        panel.style.maxHeight = null;
+                    } else {
+                        panel.style.maxHeight = panel.scrollHeight + "px";
+                    }
+                });
+            }
+            
+            // Open the first accordion by default
+            acc[0].click();
+        });
+
+        // Upload images
+        document.getElementById('uploadBtn').addEventListener('click', async function() {
+            const files = document.getElementById('imageFiles').files;
+            if (files.length === 0) {
+                showResult('uploadResult', 'Please select at least one image file', true);
+                return;
+            }
+
+            showLoading('uploadBtn');
+            
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            
+            try {
+                const response = await fetch('/upload_images', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('uploadResult', `${data.message}<br>Session ID: ${data.session_id}`);
+                    
+                    document.getElementById('sessionInfo').style.display = 'block';
+                    document.getElementById('sessionInfo').innerHTML = `Active Session ID: ${data.session_id}<br>Uploaded ${data.uploaded_files.length} files`;
+                    
+                    // Populate session ID in stitch section
+                    document.getElementById('stitchSessionId').value = data.session_id;
+                } else {
+                    showResult('uploadResult', `Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult('uploadResult', `Error: ${error.message}`, true);
+            }
+            
+            hideLoading('uploadBtn');
+        });
+
+        // Stitch images
+        document.getElementById('stitchBtn').addEventListener('click', async function() {
+            const sessionId = document.getElementById('stitchSessionId').value.trim();
+            if (!sessionId) {
+                showResult('stitchResult', 'Please enter a session ID', true);
+                return;
+            }
+            
+            showLoading('stitchBtn');
+            
+            try {
+                const response = await fetch(`/stitch_images?session_id=${sessionId}`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('stitchResult', `${data.message}<br>Result path: ${data.result_path}`);
+                    
+                    // Display the stitched image
+                    const stitchedImage = document.getElementById('stitchedImage');
+                    stitchedImage.src = `/${data.result_path}?t=${new Date().getTime()}`;  // Add timestamp to avoid caching
+                    stitchedImage.style.display = 'block';
+                    
+                    // Update input fields in other sections with the new image path
+                    document.getElementById('roiImagePath').value = data.result_path;
+                    document.getElementById('zoomImagePath').value = data.result_path;
+                    document.getElementById('focusImagePath').value = data.result_path;
+                } else {
+                    showResult('stitchResult', `Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult('stitchResult', `Error: ${error.message}`, true);
+            }
+            
+            hideLoading('stitchBtn');
+        });
+
+        // ROI Selection Variables
+        let roiStartX, roiStartY, roiEndX, roiEndY;
+        let isDragging = false;
+        let currentImage = new Image();
+        const canvas = document.getElementById('roiCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Load image for ROI selection
+        document.getElementById('loadImageBtn').addEventListener('click', function() {
+            const imagePath = document.getElementById('roiImagePath').value.trim();
+            if (!imagePath) {
+                showResult('roiResult', 'Please enter an image path', true);
+                return;
+            }
+            
+            currentImage = new Image();
+            currentImage.crossOrigin = "Anonymous";
+            currentImage.onload = function() {
+                // Resize canvas to match image aspect ratio
+                const containerWidth = canvas.parentElement.clientWidth;
+                const scale = containerWidth / currentImage.width;
+                
+                canvas.width = containerWidth;
+                canvas.height = currentImage.height * scale;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+                
+                // Reset ROI selection
+                roiStartX = roiStartY = roiEndX = roiEndY = 0;
+                updateRoiDisplay();
+            };
+            currentImage.onerror = function() {
+                showResult('roiResult', 'Failed to load image. Check the path.', true);
+            };
+            currentImage.src = `/${imagePath}?t=${new Date().getTime()}`;
+        });
+
+        // ROI canvas mouse events
+        canvas.addEventListener('mousedown', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            roiStartX = e.clientX - rect.left;
+            roiStartY = e.clientY - rect.top;
+            isDragging = true;
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            roiEndX = e.clientX - rect.left;
+            roiEndY = e.clientY - rect.top;
+            
+            // Redraw the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+            
+            // Draw selection rectangle
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(
+                Math.min(roiStartX, roiEndX),
+                Math.min(roiStartY, roiEndY),
+                Math.abs(roiEndX - roiStartX),
+                Math.abs(roiEndY - roiStartY)
+            );
+            
+            updateRoiDisplay();
+        });
+
+        canvas.addEventListener('mouseup', function() {
+            isDragging = false;
+            updateRoiDisplay();
+        });
+
+        function updateRoiDisplay() {
+            const x = Math.min(roiStartX, roiEndX);
+            const y = Math.min(roiStartY, roiEndY);
+            const width = Math.abs(roiEndX - roiStartX);
+            const height = Math.abs(roiEndY - roiStartY);
+            
+            document.getElementById('roiX').textContent = Math.round(x);
+            document.getElementById('roiY').textContent = Math.round(y);
+            document.getElementById('roiWidth').textContent = Math.round(width);
+            document.getElementById('roiHeight').textContent = Math.round(height);
+        }
+
+        // Extract ROI
+        document.getElementById('extractRoiBtn').addEventListener('click', async function() {
+            const imagePath = document.getElementById('roiImagePath').value.trim();
+            if (!imagePath) {
+                showResult('roiResult', 'Please enter an image path', true);
+                return;
+            }
+            
+            // Get the original image dimensions and scale factor
+            const scale = currentImage.width / canvas.width;
+            
+            // Calculate ROI in original image coordinates
+            const x = Math.round(Math.min(roiStartX, roiEndX) * scale);
+            const y = Math.round(Math.min(roiStartY, roiEndY) * scale);
+            const width = Math.round(Math.abs(roiEndX - roiStartX) * scale);
+            const height = Math.round(Math.abs(roiEndY - roiStartY) * scale);
+            
+            if (width === 0 || height === 0) {
+                showResult('roiResult', 'Please select a region on the image', true);
+                return;
+            }
+            
+            showLoading('extractRoiBtn');
+            
+            try {
+                const response = await fetch('/roi_selection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_path: imagePath,
+                        x: x,
+                        y: y,
+                        width: width,
+                        height: height
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('roiResult', `${data.message}<br>Result path: ${data.result_path}`);
+                    
+                    // Display the ROI image
+                    const roiImage = document.getElementById('roiImage');
+                    roiImage.src = `/${data.result_path}?t=${new Date().getTime()}`;
+                    roiImage.style.display = 'block';
+                    
+                    // Update input fields in other sections with the new image path
+                    document.getElementById('zoomImagePath').value = data.result_path;
+                    document.getElementById('focusImagePath').value = data.result_path;
+                } else {
+                    showResult('roiResult', `Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult('roiResult', `Error: ${error.message}`, true);
+            }
+            
+            hideLoading('extractRoiBtn');
+        });
+
+        // Zoom Image
+        document.getElementById('zoomBtn').addEventListener('click', async function() {
+            const imagePath = document.getElementById('zoomImagePath').value.trim();
+            const zoomFactor = document.getElementById('zoomFactor').value;
+            
+            if (!imagePath) {
+                showResult('zoomResult', 'Please enter an image path', true);
+                return;
+            }
+            
+            showLoading('zoomBtn');
+            
+            try {
+                const response = await fetch('/zoom', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_path: imagePath,
+                        zoom_factor: parseInt(zoomFactor)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('zoomResult', `${data.message}<br>Result path: ${data.result_path}`);
+                    
+                    // Display the zoomed image
+                    const zoomedImage = document.getElementById('zoomedImage');
+                    zoomedImage.src = `/${data.result_path}?t=${new Date().getTime()}`;
+                    zoomedImage.style.display = 'block';
+                    
+                    // Update input field in auto-focus section with the new image path
+                    document.getElementById('focusImagePath').value = data.result_path;
+                } else {
+                    showResult('zoomResult', `Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult('zoomResult', `Error: ${error.message}`, true);
+            }
+            
+            hideLoading('zoomBtn');
+        });
+
+        // Auto-Focus
+        document.getElementById('focusBtn').addEventListener('click', async function() {
+            const imagePath = document.getElementById('focusImagePath').value.trim();
+            
+            if (!imagePath) {
+                showResult('focusResult', 'Please enter an image path', true);
+                return;
+            }
+            
+            showLoading('focusBtn');
+            
+            try {
+                const response = await fetch(`/auto_focus?image_path=${encodeURIComponent(imagePath)}`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('focusResult', `${data.message}<br>Result path: ${data.result_path}`);
+                    
+                    // Display the focused image
+                    const focusedImage = document.getElementById('focusedImage');
+                    focusedImage.src = `/${data.result_path}?t=${new Date().getTime()}`;
+                    focusedImage.style.display = 'block';
+                } else {
+                    showResult('focusResult', `Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showResult('focusResult', `Error: ${error.message}`, true);
+            }
+            
+            hideLoading('focusBtn');
+        });
+
+        // Utility functions
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.style.display = 'block';
+            
+            if (isError) {
+                element.classList.add('error');
+            } else {
+                element.classList.remove('error');
+            }
+        }
+
+        function showLoading(buttonId) {
+            const button = document.getElementById(buttonId);
+            const originalText = button.textContent;
+            button.setAttribute('data-original-text', originalText);
+            button.innerHTML = `<span class="loading"></span> Processing...`;
+            button.disabled = true;
+        }
+
+        function hideLoading(buttonId) {
+            const button = document.getElementById(buttonId);
+            const originalText = button.getAttribute('data-original-text');
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+    </script>
+</body>
+</html>
+
+

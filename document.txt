@@ -1,0 +1,88 @@
+** Microscope Image Processing API**
+
+**Project Overview:**
+This project is a Flask-based web API for processing microscope images. It provides functionalities such as image stitching, region of interest (ROI) selection, zooming, and auto-focus simulation using OpenCV. Users can upload images and process them through API endpoints.
+
+**Technologies Used:**
+- Python
+- Flask
+- OpenCV
+- NumPy
+- UUID
+- Werkzeug
+
+**Project Structure:**
+```
+project_root/
+|-- static/
+|   |-- uploads/    # Stores uploaded images
+|   |-- results/    # Stores processed images
+|-- templates/
+|   |-- index.html  # Frontend page
+|-- image_processing/
+|   |-- stitching.py   # Image stitching logic
+|   |-- roi.py         # ROI selection logic
+|   |-- zoom.py        # Zoom functionality
+|   |-- focus.py       # Auto-focus simulation
+|-- app.py            # Main Flask application
+|-- requirements.txt  # Python dependencies
+```
+
+**Setup Instructions:**
+1. Clone the repository:
+   ```sh
+   git clone <repository-url>
+   cd project_root
+   ```
+2. Create a virtual environment and activate it:
+   ```sh
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```sh
+   pip install -r requirements.txt
+   ```
+4. Run the Flask application:
+   ```sh
+   python app.py
+   ```
+
+**API Endpoints:**
+1. **Index Page:**
+   - `GET /`
+   - Renders the index.html page.
+
+2. **Upload Images:**
+   - `POST /upload_images`
+   - Upload multiple images for processing.
+   - **Request:** Multipart/form-data with key `files`.
+   - **Response:** JSON with session ID and file paths.
+
+3. **Image Stitching:**
+   - `GET /stitch_images?session_id=<session_id>`
+   - Stitches uploaded images.
+   - **Response:** JSON with result image path.
+
+4. **ROI Selection:**
+   - `POST /roi_selection`
+   - Extracts a specific region from an image.
+   - **Request Body:** JSON with `image_path`, `x`, `y`, `width`, `height`.
+   - **Response:** JSON with ROI image path.
+
+5. **Zooming:**
+   - `POST /zoom`
+   - Zooms in on an image by 10X or 20X.
+   - **Request Body:** JSON with `image_path` and `zoom_factor` (10 or 20).
+   - **Response:** JSON with zoomed image path.
+
+6. **Auto-Focus Simulation:**
+   - `GET /auto_focus?image_path=<image_path>`
+   - Enhances image focus.
+   - **Response:** JSON with focused image path.
+
+**Error Handling:**
+- Proper error handling for missing files, invalid parameters, and processing failures.
+- Returns JSON responses with error messages and appropriate HTTP status codes.
+
+
